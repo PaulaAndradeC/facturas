@@ -286,16 +286,16 @@ void editFactura() {
 
 
 void deleteFactura() {
-    FILE *file = fopen("factura.dat", "rb");
-    FILE *tempFile = fopen("temp.dat", "wb");
-    if (file == NULL || tempFile == NULL) {
-        printf("Error al abrir los archivos\n");
+    FILE *file = fopen("factura.dat", "rb+");
+    if (file == NULL) {
+        printf("Error al abrir el archivo\n");
         return;
     }
 
     int cedula;
     struct Factura factura;
     int found = 0;
+    long posEscritura = 0;
 
     printf("Ingrese la cedula de la factura a eliminar: ");
     scanf("%d", &cedula);
@@ -305,18 +305,19 @@ void deleteFactura() {
             found = 1;
             printf("Factura con cedula %d eliminada.\n", cedula);
         } else {
-            fwrite(&factura, sizeof(struct Factura), 1, tempFile);
+            fseek(file, posEscritura, SEEK_SET); // Posición para sobrescribir
+            fwrite(&factura, sizeof(struct Factura), 1, file);
+            posEscritura += sizeof(struct Factura);
         }
     }
 
-    fclose(file);
-    fclose(tempFile);
-
-    if (found) {
-        remove("factura.dat");
-        rename("temp.dat", "factura.dat");
-    } else {
+    if (!found) {
         printf("Factura con cedula %d no encontrada.\n", cedula);
-        remove("temp.dat");
+    } else {
+        // Truncar el archivo para eliminar los datos sobrantes
+        ftruncate(fileno(file), posEscritura);
     }
+
+    fclose(file);
 }
+
